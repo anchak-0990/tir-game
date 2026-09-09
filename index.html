@@ -1,1 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLICKER</title>
 
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #111;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        #menu {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 60px;
+            margin: 0 0 10px;
+        }
+
+        .subtitle {
+            font-size: 20px;
+            opacity: 0.7;
+            margin-bottom: 35px;
+        }
+
+        button {
+            border: none;
+            padding: 15px 40px;
+            font-size: 22px;
+            border-radius: 12px;
+            cursor: pointer;
+            background: white;
+            color: #111;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        #best {
+            margin-top: 25px;
+            font-size: 18px;
+        }
+
+        #game {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #info {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 22px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #target {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        #gameOver {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+            z-index: 20;
+        }
+
+        #gameOver h2 {
+            font-size: 50px;
+            margin: 0 0 15px;
+        }
+
+        #finalScore {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        #newBest {
+            font-size: 20px;
+            margin-bottom: 25px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="menu">
+        <h1>CLICKER</h1>
+        <div class="subtitle">TEST YOUR REACTION</div>
+
+        <button id="startButton">START</button>
+
+        <div id="best">
+            BEST: <span id="bestScore">0</span>
+        </div>
+    </div>
+
+
+    <div id="game">
+
+        <div id="info">
+            <div>SCORE: <span id="score">0</span></div>
+            <div>TIME: <span id="time">30.0</span></div>
+        </div>
+
+        <div id="target">🎯</div>
+
+        <div id="gameOver">
+            <h2>TIME'S UP!</h2>
+
+            <div id="finalScore">
+                SCORE: <span id="finalScoreNumber">0</span>
+            </div>
+
+            <div id="newBest"></div>
+
+            <button id="playAgain">PLAY AGAIN</button>
+            <button id="menuButton" style="margin-top: 12px;">
+                MENU
+            </button>
+        </div>
+
+    </div>
+
+
+    <script>
+        const menu = document.getElementById("menu");
+        const game = document.getElementById("game");
+
+        const startButton = document.getElementById("startButton");
+        const playAgain = document.getElementById("playAgain");
+        const menuButton = document.getElementById("menuButton");
+
+        const target = document.getElementById("target");
+
+        const scoreElement = document.getElementById("score");
+        const timeElement = document.getElementById("time");
+        const bestScoreElement = document.getElementById("bestScore");
+
+        const gameOver = document.getElementById("gameOver");
+        const finalScoreNumber = document.getElementById("finalScoreNumber");
+        const newBest = document.getElementById("newBest");
+
+
+        let score = 0;
+        let timeLeft = 30;
+        let bestScore = Number(localStorage.getItem("clickerBest")) || 0;
+
+        let timer;
+        let animationFrame;
+
+        let targetX = 100;
+        let targetY = 100;
+
+        let velocityX = 3;
+        let velocityY = 3;
+
+        let targetSize = 70;
+
+
+        bestScoreElement.textContent = bestScore;
+
+
+        function startGame() {
+
+            menu.style.display = "none";
+            game.style.display = "block";
+
+            gameOver.style.display = "none";
+
+            score = 0;
+            timeLeft = 30;
+
+            targetSize = 70;
+
+            scoreElement.textContent = score;
+            timeElement.textContent = timeLeft.toFixed(1);
+
+            target.style.width = targetSize + "px";
+            target.style.height = targetSize + "px";
+
+            targetX = Math.random() * (window.innerWidth - targetSize);
+            targetY = Math.random() * (window.innerHeight - targetSize);
+
+            velocityX = (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1);
+            velocityY = (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1);
+
+            moveTarget();
+
+            clearInterval(timer);
+            cancelAnimationFrame(animationFrame);
+
+            timer = setInterval(() => {
+
+                timeLeft -= 0.1;
+
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                    endGame();
+                }
+
+                timeElement.textContent = timeLeft.toFixed(1);
+
+            }, 100);
+
+            animateTarget();
+        }
+
+
+        function animateTarget() {
+
+            targetX += velocityX;
+            targetY += velocityY;
+
+            const maxX = window.innerWidth - targetSize;
+            const maxY = window.innerHeight - targetSize;
+
+            if (targetX <= 0 || targetX >= maxX) {
+                velocityX *= -1;
+            }
+
+            if (targetY <= 0 || targetY >= maxY) {
+                velocityY *= -1;
+            }
+
+            moveTarget();
+
+            animationFrame = requestAnimationFrame(animateTarget);
+        }
+
+
+        function moveTarget() {
+
+            target.style.left = targetX + "px";
+            target.style.top = targetY + "px";
+        }
+
+
+        target.addEventListener("click", () => {
+
+            if (timeLeft <= 0) return;
+
+            score++;
+
+            scoreElement.textContent = score;
+
+            timeLeft = Math.max(0, timeLeft);
+
+            targetSize = Math.max(25, 70 - score * 1.5);
+
+            target.style.width = targetSize + "px";
+            target.style.height = targetSize + "px";
+
+            velocityX *= -1;
+            velocityY *= -1;
+
+            targetX = Math.random() * (window.innerWidth - targetSize);
+            targetY = Math.random() * (window.innerHeight - targetSize);
+
+            moveTarget();
+        });
+
+
+        game.addEventListener("click", (event) => {
+
+            if (event.target === target) return;
+
+            if (timeLeft <= 0) return;
+
+            timeLeft = Math.max(0, timeLeft - 0.5);
+
+            timeElement.textContent = timeLeft.toFixed(1);
+
+        });
+
+
+        function endGame() {
+
+            clearInterval(timer);
+            cancelAnimationFrame(animationFrame);
+
+            if (score > bestScore) {
+
+                bestScore = score;
+
+                localStorage.setItem("clickerBest", bestScore);
+
+                bestScoreElement.textContent = bestScore;
+
+                newBest.textContent = "NEW BEST! 🔥";
+
+            } else {
+
+                newBest.textContent = "";
+            }
+
+            finalScoreNumber.textContent = score;
+
+            gameOver.style.display = "flex";
+        }
+
+
+        function goToMenu() {
+
+            clearInterval(timer);
+            cancelAnimationFrame(animationFrame);
+
+            game.style.display = "none";
+            menu.style.display = "flex";
+
+            gameOver.style.display = "none";
+        }
+
+
+        startButton.addEventListener("click", startGame);
+
+        playAgain.addEventListener("click", startGame);
+
+        menuButton.addEventListener("click", goToMenu);
+    </script>
+
+</body>
+</html>
